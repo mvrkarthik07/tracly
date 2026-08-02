@@ -1,7 +1,12 @@
 import { Router } from 'express';
 import { createToken, verifyPassword } from '../lib/auth';
+import { authGuard } from '../middleware/authGuard';
 
 export const authRouter = Router();
+
+authRouter.get('/session', authGuard, (_req, res) => {
+  res.json({ ok: true });
+});
 
 authRouter.post('/login', async (req, res) => {
   const password = typeof req.body?.password === 'string' ? req.body.password : '';

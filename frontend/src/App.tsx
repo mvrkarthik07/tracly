@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getTransactions, logout, type Transaction } from './api/client';
+import { checkSession, getTransactions, logout, type Transaction } from './api/client';
 import { Dashboard } from './components/Dashboard';
 import { LandingScreen } from './components/LandingScreen';
 import { useAnalytics } from './hooks/useAnalytics';
@@ -50,33 +50,42 @@ function InstallPrompt() {
 }
 
 export default function App() {
-  const [authenticated, setAuthenticated] = useState(false);
+  const [authStatus, setAuthStatus] = useState<'checking' | 'authenticated' | 'unauthenticated'>('checking');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadError, setLoadError] = useState('');
   const [serverSummaryReady, setServerSummaryReady] = useState(false);
   const { summary, weekSummary, latestReport, loading: analyticsLoading, refresh: refreshAnalytics } = useAnalytics();
   const replaceSynced = useCallback((clientId: string, transaction: Transaction) => setTransactions((items) => items.map((item) => item.clientId === clientId ? transaction : item)), []);
-  const sync = useSync(replaceSynced);
+  const sync = useSync(replaceSynced, authStatus === 'authenticated');
 
-  const refresh = useCallback(async () => {
+  const refreshDashboard = useCallback(async () => {
     try {
       setTransactions(await getTransactions());
-      setAuthenticated(true);
       setLoadError('');
       await refreshAnalytics();
       setServerSummaryReady(true);
     } catch {
-      setAuthenticated(false);
+      setAuthStatus('unauthenticated');
       setLoadError(navigator.onLine ? 'Unable to load tracly right now. Try again.' : "You're offline and have no local data yet.");
       setServerSummaryReady(false);
     }
   }, [refreshAnalytics]);
-  useEffect(() => { void refresh(); }, [refresh]);
+  const handleAuthenticated = useCallback(() => {
+    setAuthStatus('authenticated');
+    void refreshDashboard();
+  }, [refreshDashboard]);
+  useEffect(() => {
+    let active = true;
+    void checkSession()
+      .then(() => { if (active) handleAuthenticated(); })
+      .catch(() => { if (active) setAuthStatus('unauthenticated'); });
+    return () => { active = false; };
+  }, [handleAuthenticated]);
   const addOptimistic = (transaction: Transaction) => {
     setServerSummaryReady(false);
     setTransactions((items) => [transaction, ...items]);
   };
-  const handleLogout = async () => { await logout().catch(() => undefined); setAuthenticated(false); setTransactions([]); };
+  const handleLogout = async () => { await logout().catch(() => undefined); setAuthStatus('unauthenticated'); setTransactions([]); };
   const derivedSummaries = useMemo(() => {
     const now = new Date();
     const today = startOfDay(now);
@@ -92,9 +101,10 @@ export default function App() {
   const displayedSummary = serverSummaryReady ? (summary ?? derivedSummaries.summary) : derivedSummaries.summary;
   const displayedWeekSummary = serverSummaryReady ? (weekSummary ?? derivedSummaries.weekSummary) : derivedSummaries.weekSummary;
 
-  if (!authenticated) return <><LandingScreen initialError={loadError} onLogin={() => void refresh()} /><InstallPrompt /></>;
+  if (authStatus === 'checking') return <div className="loading-screen">Checking session…</div>;
+  if (authStatus === 'unauthenticated') return <><LandingScreen initialError={loadError} onLogin={handleAuthenticated} /><InstallPrompt /></>;
   if (analyticsLoading && !summary) return <div className="loading-screen">Opening tracly…</div>;
-  return <><Dashboard transactions={transactions} summary={displayedSummary} weekSummary={displayedWeekSummary} report={latestReport} onAdd={addOptimistic} onQueued={() => void sync.flush()} onRefresh={() => void refresh()} pendingCount={sync.pendingCount} failedCount={sync.failedCount} onLogout={() => void handleLogout()} /><InstallPrompt /></>;
+  return <><Dashboard transactions={transactions} summary={displayedSummary} weekSummary={displayedWeekSummary} report={latestReport} onAdd={addOptimistic} onQueued={() => void sync.flush()} onRefresh={() => void refreshDashboard()} pendingCount={sync.pendingCount} failedCount={sync.failedCount} onLogout={() => void handleLogout()} /><InstallPrompt /></>;
 }
 
 declare global {

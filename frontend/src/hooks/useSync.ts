@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { createTransaction, deleteTransaction, updateTransaction, type Transaction } from '../api/client';
 import { getPendingTransactions, removeQueuedTransaction, updateQueuedTransaction } from '../db/offlineQueue';
 
-export const useSync = (onSynced: (clientId: string, transaction: Transaction) => void) => {
+export const useSync = (onSynced: (clientId: string, transaction: Transaction) => void, enabled: boolean) => {
   const [pendingCount, setPendingCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
   const refreshCounts = useCallback(async () => {
@@ -46,11 +46,12 @@ export const useSync = (onSynced: (clientId: string, transaction: Transaction) =
     await refreshCounts();
   }, [onSynced, refreshCounts]);
   useEffect(() => {
+    if (!enabled) return;
     void flush();
     const onOnline = () => void flush();
     window.addEventListener('online', onOnline);
     const interval = window.setInterval(() => void flush(), 30_000);
     return () => { window.removeEventListener('online', onOnline); window.clearInterval(interval); };
-  }, [flush]);
+  }, [enabled, flush]);
   return { pendingCount, failedCount, flush };
 };

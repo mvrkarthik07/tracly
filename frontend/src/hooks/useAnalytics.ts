@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { getLatestReport, getSummary, type AnalyticsSummary, type WeeklyReport } from '../api/client';
 
 export const useAnalytics = () => {
@@ -15,6 +15,5 @@ export const useAnalytics = () => {
     try { setLatestReport(await getLatestReport()); } catch { setLatestReport(null); }
     setLoading(false);
   }, []);
-  useEffect(() => { void refresh(); }, [refresh]);
   return { summary, weekSummary, latestReport, loading, refresh };
 };

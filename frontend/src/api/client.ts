@@ -14,6 +14,8 @@ export class ApiError extends Error {
   constructor(message: string, public readonly status: number) { super(message); this.name = 'ApiError'; }
 }
 
+export const checkSession = () => request<{ ok: true }>(`${BASE_URL}/auth/session`);
+
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(path, { ...init, credentials: 'include', headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) } });
   if (!response.ok) {
