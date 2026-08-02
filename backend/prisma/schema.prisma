@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TxType {
+  INCOME
+  EXPENSE
+}
+
+model Transaction {
+  id         String   @id @default(cuid())
+  amount     Decimal  @db.Decimal(12, 2)
+  type       TxType
+  category   String
+  note       String?
+  occurredAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  clientId   String?  @unique
+
+  @@index([occurredAt])
+  @@index([type])
+}
+
+model WeeklyReport {
+  id           String   @id @default(cuid())
+  weekStart    DateTime
+  weekEnd      DateTime
+  totalIncome  Decimal  @db.Decimal(12, 2)
+  totalExpense Decimal  @db.Decimal(12, 2)
+  net          Decimal  @db.Decimal(12, 2)
+  byCategory   Json
+  topCategory  String?
+  generatedAt  DateTime @default(now())
+
+  @@unique([weekStart, weekEnd])
+}

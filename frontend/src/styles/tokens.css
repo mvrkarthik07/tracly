@@ -1,0 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+  --bg: #05070F;
+  --accent: #A8977A;
+  --font-display: 'Instrument Serif', serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --text: #f1eee8;
+  --muted: #85838a;
+  --line: rgba(168, 151, 122, .18);
+  --panel: rgba(255, 255, 255, .045);
+  --green: #86b995;
+  --red: #d98980;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); }
+button, input { font: inherit; }
+button { cursor: pointer; }
