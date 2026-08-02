@@ -1,0 +1,19 @@
+.app-shell, .topbar, .content {
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+}
+
+@media (min-width: 640px) {
+  .app-shell, .topbar, .content { max-width: 720px; }
+}
+
+@media (min-width: 1024px) {
+  .app-shell, .topbar, .content { max-width: 960px; }
+}
+
+@media (min-width: 1200px) {
+  .app-shell { max-width: none; }
+  .topbar { max-width: 100%; }
+  .content { max-width: 100%; padding-inline: clamp(24px, 3vw, 64px); }
+}

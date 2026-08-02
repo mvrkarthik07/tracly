@@ -1,8 +1,7 @@
 import { Router } from 'express';
-import { Prisma, TxType } from '@prisma/client';
+import { Prisma, PrismaClient, TxType } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-
-export const transactionsRouter = Router();
+import { CATEGORIES, type Category } from '../constants/categories';
 
 const parseDate = (value: unknown): Date | undefined => {
   if (typeof value !== 'string' || !value) return undefined;
@@ -10,7 +9,9 @@ const parseDate = (value: unknown): Date | undefined => {
   return Number.isNaN(date.getTime()) ? undefined : date;
 };
 
-const parseAmount = (value: unknown): Prisma.Decimal | null => {
+const isCategory = (value: unknown): value is Category => typeof value === 'string' && (CATEGORIES as readonly string[]).includes(value);
+
+export const parseAmount = (value: unknown): Prisma.Decimal | null => {
   const amount = typeof value === 'number' || typeof value === 'string' ? Number(value) : NaN;
   return Number.isFinite(amount) && amount > 0 ? new Prisma.Decimal(amount.toFixed(2)) : null;
 };
@@ -20,13 +21,17 @@ const serializeTransaction = (transaction: Prisma.TransactionGetPayload<{}>) => 
   amount: transaction.amount.toString(),
 });
 
-transactionsRouter.get('/', async (req, res, next) => {
+export const createTransactionsRouter = (database: PrismaClient = prisma) => {
+  const transactionsRouter = Router();
+
+  transactionsRouter.get('/', async (req, res, next) => {
   try {
     const from = parseDate(req.query.from);
     const to = parseDate(req.query.to);
-    const category = typeof req.query.category === 'string' && req.query.category ? req.query.category : undefined;
+    const queryCategory = typeof req.query.category === 'string' ? req.query.category.trim().toUpperCase() : '';
+    const category = isCategory(queryCategory) ? queryCategory : undefined;
     const type = req.query.type === 'INCOME' || req.query.type === 'EXPENSE' ? req.query.type : undefined;
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await database.transaction.findMany({
       where: {
         ...(from || to ? { occurredAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
         ...(category ? { category } : {}),
@@ -38,21 +43,22 @@ transactionsRouter.get('/', async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+  });
 
-transactionsRouter.post('/', async (req, res, next) => {
+  transactionsRouter.post('/', async (req, res, next) => {
   try {
     const amount = parseAmount(req.body?.amount);
     const type = req.body?.type === 'INCOME' || req.body?.type === 'EXPENSE' ? req.body.type : null;
-    const category = typeof req.body?.category === 'string' ? req.body.category.trim().toLowerCase() : '';
+    const categoryValue = typeof req.body?.category === 'string' ? req.body.category.trim().toUpperCase() : '';
+    const category = isCategory(categoryValue) ? categoryValue : null;
     const clientId = typeof req.body?.clientId === 'string' && req.body.clientId.trim() ? req.body.clientId.trim() : null;
     const occurredAt = parseDate(req.body?.occurredAt);
     if (!amount || !type || !category || !clientId) {
-      res.status(400).json({ error: 'amount, type, category, and clientId are required' });
+      res.status(400).json({ error: 'amount, type, category, and clientId are required; category must be one of the supported categories' });
       return;
     }
 
-    const transaction = await prisma.transaction.upsert({
+    const transaction = await database.transaction.upsert({
       where: { clientId },
       create: {
         amount,
@@ -68,9 +74,9 @@ transactionsRouter.post('/', async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+  });
 
-transactionsRouter.patch('/:id', async (req, res, next) => {
+  transactionsRouter.patch('/:id', async (req, res, next) => {
   try {
     const data: Prisma.TransactionUpdateInput = {};
     if (req.body?.amount !== undefined) {
@@ -78,24 +84,36 @@ transactionsRouter.patch('/:id', async (req, res, next) => {
       if (!amount) { res.status(400).json({ error: 'amount must be a positive number' }); return; }
       data.amount = amount;
     }
-    if (req.body?.type === 'INCOME' || req.body?.type === 'EXPENSE') data.type = req.body.type;
-    if (typeof req.body?.category === 'string' && req.body.category.trim()) data.category = req.body.category.trim().toLowerCase();
+    if (req.body?.type !== undefined) {
+      if (req.body.type !== 'INCOME' && req.body.type !== 'EXPENSE') { res.status(400).json({ error: 'type must be INCOME or EXPENSE' }); return; }
+      data.type = req.body.type;
+    }
+    if (req.body?.category !== undefined) {
+      const categoryValue = typeof req.body.category === 'string' ? req.body.category.trim().toUpperCase() : '';
+      if (!isCategory(categoryValue)) { res.status(400).json({ error: 'category must be one of the supported categories' }); return; }
+      data.category = categoryValue;
+    }
     if (typeof req.body?.note === 'string') data.note = req.body.note.trim() || null;
     const occurredAt = parseDate(req.body?.occurredAt);
     if (req.body?.occurredAt !== undefined && !occurredAt) { res.status(400).json({ error: 'occurredAt must be a valid date' }); return; }
     if (occurredAt) data.occurredAt = occurredAt;
-    const transaction = await prisma.transaction.update({ where: { id: req.params.id }, data });
+    const transaction = await database.transaction.update({ where: { id: req.params.id }, data });
     res.json(serializeTransaction(transaction));
   } catch (error) {
     next(error);
   }
-});
+  });
 
-transactionsRouter.delete('/:id', async (req, res, next) => {
+  transactionsRouter.delete('/:id', async (req, res, next) => {
   try {
-    await prisma.transaction.delete({ where: { id: req.params.id } });
+    await database.transaction.delete({ where: { id: req.params.id } });
     res.status(204).send();
   } catch (error) {
     next(error);
   }
-});
+  });
+
+  return transactionsRouter;
+};
+
+export const transactionsRouter = createTransactionsRouter();

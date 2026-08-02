@@ -6,19 +6,24 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && vite build",
+    "test": "node --experimental-strip-types --test src/**/*.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/geist-mono": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
     "idb-keyval": "^6.2.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
+    "@types/node": "^22.20.1",
     "@types/react": "^18.3.20",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.4.1",
+    "typescript": "^5.8.3",
     "vite": "^6.3.2",
-    "vite-plugin-pwa": "^0.21.1",
-    "typescript": "^5.8.3"
+    "vite-plugin-pwa": "^0.21.1"
   }
 }

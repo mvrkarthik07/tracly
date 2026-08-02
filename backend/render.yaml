@@ -24,11 +24,33 @@ services:
     name: finance-tracker-weekly-report
     runtime: node
     rootDir: backend
-    schedule: "59 15 * * 0"
+    schedule: "1 16 * * 0"
     buildCommand: npm ci
     startCommand: >-
       curl --fail --silent --show-error -X POST
       "${BACKEND_URL}/api/reports/generate"
+      -H "X-Cron-Secret: ${CRON_SECRET}"
+    envVars:
+      - key: BACKEND_URL
+        fromService:
+          type: web
+          name: finance-tracker-api
+          property: host
+      - key: CRON_SECRET
+        fromService:
+          type: web
+          name: finance-tracker-api
+          envVarKey: CRON_SECRET
+
+  - type: cron
+    name: finance-tracker-recurring-transactions
+    runtime: node
+    rootDir: backend
+    schedule: "5 16 * * *"
+    buildCommand: npm ci
+    startCommand: >-
+      curl --fail --silent --show-error -X POST
+      "${BACKEND_URL}/api/recurring/generate"
       -H "X-Cron-Secret: ${CRON_SECRET}"
     envVars:
       - key: BACKEND_URL

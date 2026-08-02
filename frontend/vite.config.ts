@@ -12,8 +12,8 @@ export default defineConfig({
         name: 'Finance Tracker',
         short_name: 'Finance',
         description: 'A private, offline-friendly personal finance tracker.',
-        theme_color: '#05070F',
-        background_color: '#05070F',
+        theme_color: '#FFFFFF',
+        background_color: '#FFFFFF',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
@@ -32,5 +32,15 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          recharts: ['recharts'],
+        },
+      },
+    },
+  },
   server: { port: 5173 },
 });

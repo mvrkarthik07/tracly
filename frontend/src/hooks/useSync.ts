@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { createTransaction, type Transaction } from '../api/client';
+import { createTransaction, deleteTransaction, updateTransaction, type Transaction } from '../api/client';
 import { getPendingTransactions, removeQueuedTransaction, updateQueuedTransaction } from '../db/offlineQueue';
 
 export const useSync = (onSynced: (clientId: string, transaction: Transaction) => void) => {
@@ -16,9 +16,28 @@ export const useSync = (onSynced: (clientId: string, transaction: Transaction) =
     for (const item of items) {
       if (item.failed || item.nextAttemptAt > Date.now()) continue;
       try {
-        const transaction = await createTransaction(item.payload);
+        const operation = item.operation ?? 'create';
+        let transaction: Transaction | undefined;
+        if (operation === 'create' && item.payload) {
+          transaction = await createTransaction(item.payload as Parameters<typeof createTransaction>[0]);
+        } else if (operation === 'update' && item.transactionId && item.payload) {
+          transaction = await updateTransaction(item.transactionId, item.payload);
+        } else if (operation === 'delete' && item.transactionId) {
+          await deleteTransaction(item.transactionId);
+        } else {
+          throw new Error('Invalid queued transaction operation');
+        }
         await removeQueuedTransaction(item.id);
-        onSynced(item.id, transaction);
+        if (transaction) {
+          if (operation === 'create') {
+            const localId = `local-${item.id}`;
+            await Promise.all(items.filter((queued) => queued.transactionId === localId).map(async (queued) => {
+              queued.transactionId = transaction!.id;
+              await updateQueuedTransaction(queued.id, { transactionId: transaction!.id });
+            }));
+          }
+          onSynced(operation === 'update' ? item.transactionId! : item.id, transaction);
+        }
       } catch {
         const attempts = item.attempts + 1;
         await updateQueuedTransaction(item.id, { attempts, failed: attempts >= 5, nextAttemptAt: Date.now() + Math.min(60_000, 2 ** attempts * 1000) });

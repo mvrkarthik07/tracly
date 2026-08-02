@@ -1,12 +1,13 @@
 {
-  "name": "Finance Tracker",
-  "short_name": "Finance",
-  "theme_color": "#05070F",
-  "background_color": "#05070F",
+  "name": "tracly",
+  "short_name": "tracly",
+  "theme_color": "#FFFFFF",
+  "background_color": "#FFFFFF",
   "display": "standalone",
   "orientation": "portrait",
   "icons": [
-    { "src": "/pwa-192.svg", "sizes": "192x192", "type": "image/svg+xml" },
-    { "src": "/pwa-512.svg", "sizes": "512x512", "type": "image/svg+xml" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

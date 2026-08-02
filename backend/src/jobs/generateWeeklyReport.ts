@@ -1,19 +1,8 @@
 import { prisma } from '../lib/prisma';
-
-const SGT_OFFSET_MS = 8 * 60 * 60 * 1000;
-
-const startOfMondaySgt = (date: Date): Date => {
-  const local = new Date(date.getTime() + SGT_OFFSET_MS);
-  local.setUTCHours(0, 0, 0, 0);
-  const day = local.getUTCDay();
-  local.setUTCDate(local.getUTCDate() - (day === 0 ? 6 : day - 1));
-  return new Date(local.getTime() - SGT_OFFSET_MS);
-};
+import { getLastCompletedSingaporeWeekRange } from '../lib/timezone';
 
 export const generateWeeklyReport = async (): Promise<unknown> => {
-  const currentMonday = startOfMondaySgt(new Date());
-  const weekStart = new Date(currentMonday.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const weekEnd = new Date(currentMonday.getTime() - 1);
+  const { from: weekStart, to: weekEnd } = getLastCompletedSingaporeWeekRange();
   const transactions = await prisma.transaction.findMany({ where: { occurredAt: { gte: weekStart, lte: weekEnd } } });
   let totalIncome = 0;
   let totalExpense = 0;

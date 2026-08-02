@@ -1,21 +1,19 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
+import { getCurrentSingaporeCalendarRange, getCurrentSingaporeWeekRange } from '../lib/timezone';
 
 export const analyticsRouter = Router();
 
-const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
-const endOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
 const money = (value: unknown) => Number(value?.toString?.() ?? value ?? 0);
 
 analyticsRouter.get('/summary', async (req, res, next) => {
   try {
     const now = new Date();
     const range = req.query.range === 'month' || req.query.range === 'ytd' ? req.query.range : 'week';
-    let from = startOfDay(now);
-    if (range === 'week') from.setDate(from.getDate() - 6);
-    if (range === 'month') from = new Date(now.getFullYear(), now.getMonth(), 1);
-    if (range === 'ytd') from = new Date(now.getFullYear(), 0, 1);
-    const to = endOfDay(now);
+    let from: Date;
+    let to: Date;
+    if (range === 'week') ({ from, to } = getCurrentSingaporeWeekRange(now));
+    else ({ from, to } = getCurrentSingaporeCalendarRange(range, now));
     const transactions = await prisma.transaction.findMany({ where: { occurredAt: { gte: from, lte: to } }, orderBy: { occurredAt: 'asc' } });
     let totalIncome = 0;
     let totalExpense = 0;
