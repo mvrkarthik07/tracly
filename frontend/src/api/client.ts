@@ -8,14 +8,15 @@ export type WeeklyReport = { id: string; weekStart: string; weekEnd: string; tot
 export type RecurringTransaction = { id: string; amount: string; type: TxType; category: Category; note: string | null; frequency: 'MONTHLY'; dayOfMonth: number; startDate: string; endDate: string | null; active: boolean; createdAt: string; updatedAt: string };
 export type NewRecurringTransaction = { amount: number; type: TxType; category: Category; note?: string; frequency?: 'MONTHLY'; dayOfMonth: number; startDate: string; endDate?: string | null; active?: boolean };
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000').replace(/\/$/, '');
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 
 export class ApiError extends Error {
   constructor(message: string, public readonly status: number) { super(message); this.name = 'ApiError'; }
 }
 
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
-  const response = await fetch(`${API_BASE}${path}`, { ...init, credentials: 'include', headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) } });
+  const relativePath = path.startsWith('/api/') ? path.slice(4) : path;
+  const response = await fetch(`${API_BASE}${relativePath}`, { ...init, credentials: 'include', headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) } });
   if (!response.ok) {
     const body = await response.json().catch(() => ({})) as { error?: string };
     throw new ApiError(body.error || `Request failed (${response.status})`, response.status);

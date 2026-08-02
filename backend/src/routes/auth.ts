@@ -13,7 +13,7 @@ authRouter.post('/login', async (req, res) => {
   res.cookie('finance_token', createToken(), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    sameSite: 'lax',
     maxAge: 30 * 24 * 60 * 60 * 1000,
     path: '/',
   });
