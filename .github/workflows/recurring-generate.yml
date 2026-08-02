@@ -9,4 +9,4 @@ jobs:
   trigger:
     runs-on: ubuntu-latest
     steps:
-      - run: 'curl -f -X POST https://finance-tracker-api.onrender.com/api/recurring/generate -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}"'
+      - run: 'curl -f -X POST https://tracly-ibrv.onrender.com/api/recurring/generate -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}"'
